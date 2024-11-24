@@ -1,12 +1,14 @@
 package model;
 
+import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
 /**
  * Classe que representa uma locação de automóvel.
  */
-public class Locacao {
+public class Locacao implements Serializable{
+	private static final long serialVersionUID = 1L;
 	private Cliente cliente;
     private Automovel automovel;
     private int diasLocacao;

@@ -4,6 +4,7 @@ package model;
  * Classe que representa um automóvel medio.
  */
 public class AutomovelMedio extends Automovel{
+	private static final long serialVersionUID = 1L;
 
 	public AutomovelMedio(String placa, int anoModelo, double valorBaseDiaria) {
 		super(placa, anoModelo, valorBaseDiaria);
