@@ -1,9 +1,12 @@
 package model;
 
+import java.io.Serializable;
+
 /**
  * Classe que representa um cliente da locadora de automóveis.
  */
-public class Cliente {
+public class Cliente implements Serializable{
+	private static final long serialVersionUID = 1L;
 	private String nome;
 	private String cpf;
 	

@@ -1,10 +1,13 @@
 package model;
 
+import java.io.Serializable;
+
 /**
  * Classe base que representa um automóvel.
  * Esta classe é abstrata e será herdada pelas classes específicas de tipos de automóveis.
  */
-public abstract class Automovel {
+public abstract class Automovel implements Serializable{
+	private static final long serialVersionUID = 1L;
 	private String placa;
     private int anoModelo;
     private double valorBaseDiaria;
