@@ -1,42 +1,150 @@
 package persistencia;
 
+import model.*;
+import excecoes.*;
 import java.io.*;
-import java.util.List;
+import java.util.*;
 
 /**
- * Classe utilitária para salvar e carregar objetos em arquivos usando serialização.
+ * Classe responsável pela persistência dos dados no sistema.
  */
 public class Persistencia {
 
-    /**
-     * Salva uma lista de objetos em um arquivo.
-     *
-     * @param lista   A lista de objetos a ser salva.
-     * @param caminho O caminho do arquivo onde os dados serão armazenados.
-     * @param <T>     O tipo de objetos na lista (deve ser Serializable).
-     * @throws IOException Se ocorrer um erro ao salvar os dados.
-     */
-    public static <T extends Serializable> void salvarDados(List<T> lista, String caminho) throws IOException {
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(caminho))) {
-            oos.writeObject(lista);
-        }
+    private static final String ARQUIVO_CLIENTES = "clientes.dat";
+    private static final String ARQUIVO_AUTOMOVEIS = "automoveis.dat";
+    private static final String ARQUIVO_LOCACOES = "locacoes.dat";
+
+    private List<Automovel> automoveis;
+    private List<Cliente> clientes;
+    private List<Locacao> locacoes;
+
+    public Persistencia() {
+        this.automoveis = new ArrayList<>();
+        this.clientes = new ArrayList<>();
+        this.locacoes = new ArrayList<>();
     }
 
     /**
-     * Carrega uma lista de objetos de um arquivo.
-     *
-     * @param caminho O caminho do arquivo de onde os dados serão carregados.
-     * @param <T>     O tipo de objetos na lista (deve ser Serializable).
-     * @return Uma lista de objetos carregados.
-     * @throws IOException            Se ocorrer um erro ao ler os dados.
-     * @throws ClassNotFoundException Se as classes dos objetos não forem encontradas.
+     * Carrega os dados salvos em arquivos.
      */
-    @SuppressWarnings("unchecked")
-    public static <T extends Serializable> List<T> carregarDados(String caminho) throws IOException, ClassNotFoundException {
+    public void carregarDados() {
+        this.clientes = carregarArquivo(ARQUIVO_CLIENTES);
+        this.automoveis = carregarArquivo(ARQUIVO_AUTOMOVEIS);
+        this.locacoes = carregarArquivo(ARQUIVO_LOCACOES);
+    }
+
+    /**
+     * Salva os dados em arquivos.
+     */
+    public void salvarDados() {
+        salvarArquivo(ARQUIVO_CLIENTES, clientes);
+        salvarArquivo(ARQUIVO_AUTOMOVEIS, automoveis);
+        salvarArquivo(ARQUIVO_LOCACOES, locacoes);
+    }
+
+    private <T> List<T> carregarArquivo(String caminho) {
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(caminho))) {
             return (List<T>) ois.readObject();
-        } catch (FileNotFoundException e) {
-            return new java.util.ArrayList<>();
+        } catch (IOException | ClassNotFoundException e) {
+            return new ArrayList<>();
         }
+    }
+
+    private <T> void salvarArquivo(String caminho, List<T> lista) {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(caminho))) {
+            oos.writeObject(lista);
+        } catch (IOException e) {
+            System.err.println("Erro ao salvar dados: " + e.getMessage());
+        }
+    }
+
+    public void cadastrarCliente(Cliente cliente) throws CpfDuplicadoException {
+        for (Cliente c : clientes) {
+            if (c.getCpf().equals(cliente.getCpf())) {
+                throw new CpfDuplicadoException("Já existe um cliente com o CPF " + cliente.getCpf());
+            }
+        }
+        clientes.add(cliente);
+    }
+
+    public List<Cliente> listarClientes() {
+        return new ArrayList<>(clientes);
+    }
+
+    public Cliente buscarCliente(String cpf) {
+        for (Cliente cliente : clientes) {
+            if (cliente.getCpf().equals(cpf)) {
+                return cliente;
+            }
+        }
+        return null;
+    }
+
+    public void cadastrarAutomovel(Automovel automovel) throws PlacaDuplicadaException {
+        for (Automovel a : automoveis) {
+            if (a.getPlaca().equals(automovel.getPlaca())) {
+                throw new PlacaDuplicadaException("Já existe um automóvel com a placa " + automovel.getPlaca());
+            }
+        }
+        automoveis.add(automovel);
+    }
+
+    public List<Automovel> listarAutomoveis() {
+        return new ArrayList<>(automoveis);
+    }
+
+    public Automovel buscarAutomovel(String placa) {
+        for (Automovel automovel : automoveis) {
+            if (automovel.getPlaca().equals(placa)) {
+                return automovel;
+            }
+        }
+        return null;
+    }
+
+    public List<Automovel> listarAutomoveisDisponiveis() {
+        List<Automovel> disponiveis = new ArrayList<>();
+        for (Automovel automovel : automoveis) {
+            if (!automovel.isAlugado()) {
+                disponiveis.add(automovel);
+            }
+        }
+        return disponiveis;
+    }
+
+    public void alugarAutomovel(Automovel automovel, Cliente cliente, int dias) throws AutomovelIndisponivelException {
+        if (automovel.isAlugado()) {
+            throw new AutomovelIndisponivelException("Automóvel já está alugado.");
+        }
+        Locacao locacao = new Locacao(cliente, automovel, dias);
+        locacoes.add(locacao);
+        automovel.setAlugado(true);
+    }
+
+    public double devolverAutomovel(Automovel automovel, int diasRealizados) {
+        Locacao locacaoEncontrada = null;
+        for (Locacao locacao : locacoes) {
+            if (locacao.getAutomovel().equals(automovel)) {
+                locacaoEncontrada = locacao;
+                break;
+            }
+        }
+
+        if (locacaoEncontrada == null) {
+            throw new IllegalArgumentException("Locação não encontrada.");
+        }
+
+        locacoes.remove(locacaoEncontrada);
+        automovel.setAlugado(false);
+
+        int diasContratados = locacaoEncontrada.getDias();
+        double valorBase = locacaoEncontrada.getAutomovel().calcularDiaria(diasContratados);
+
+        if (diasRealizados > diasContratados) {
+            double multa = (diasRealizados - diasContratados) * 0.10 * valorBase;
+            return valorBase + multa;
+        }
+
+        return valorBase;
     }
 }
